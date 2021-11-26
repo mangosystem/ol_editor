@@ -31,7 +31,7 @@ class Container extends React.Component {
     anchorEl: null,
     popupTop: null,
     popupLeft: null,
-    multi: false
+    multi: false,
   }
 
   componentDidMount () {
@@ -68,7 +68,7 @@ class Container extends React.Component {
     });
 
     const select = new Select();
-
+    
     map.addInteraction(select);
     select.on('select', this.selectFunc);
     map.getViewport().addEventListener('contextmenu', this.rightClick);
@@ -86,6 +86,24 @@ class Container extends React.Component {
     })
 
     this.setState({map, drawLyr, select});
+  }
+
+  selectFunc = (e) => {
+    if(e.target.getFeatures().getArray().length > 0){
+      let type = null;
+      for(let i = 0; i < e.target.getFeatures().getArray().length; i++){
+        const feature = e.target.getFeatures().getArray()[i];
+        if(type === null){
+          type = feature.getGeometry().getType();
+        }else if(type !== feature.getGeometry().getType()){
+          e.target.restorePreviousStyle_(e.target.getFeatures().getArray()[i]);
+          e.target.getFeatures().getArray().splice(i, 1);
+          e.selected.splice(0,1);
+          alert('같은 타입의 피쳐만 선택할 수 있습니다.');
+          return;
+        }
+      }
+    }
   }
 
   // 그리기
@@ -298,7 +316,7 @@ class Container extends React.Component {
   // 피쳐 이동
   handleFeatureMove = () => {
     this.handleClosePopup();
-    editors.featureMove(this.state.map, this.state.select.getFeatures().getArray()[0]);
+    editors.featureMove(this.state.map, this.state.select.getFeatures().getArray());
   }
 
   // 피쳐 회전
@@ -307,24 +325,32 @@ class Container extends React.Component {
     editors.rotate(map, features, this.createRotateStyle());
   }
 
-  handleFeatureStraight = (feature) => {
+  handleFeatureStraight = (features) => {
     this.handleClosePopup();
-    editors.lineStraight(feature);
+    for(let item of features){
+      editors.lineStraight(item);
+    }
   }
 
-  handleFeatureReverse = (feature) => {
+  handleFeatureReverse = (features) => {
     this.handleClosePopup();
-    editors.lineReverse(feature);
+    for(let item of features){
+      editors.lineReverse(item);
+    }
   }
 
-  handleFeatureSimplify = (feature) => {
+  handleFeatureSimplify = (features) => {
     this.handleClosePopup();
-    editors.simplify(feature);
+    for(let item of features){
+      editors.simplify(item);
+    }
   }
 
-  handleFeatureReflect = (type, feature) => {
+  handleFeatureReflect = (type, features) => {
     this.handleClosePopup();
-    editors.reflect(type, feature);
+    for(let item of features){
+      editors.reflect(type, item);
+    }
   }
 
   handleFeatureSplit = (type, feature) => {
@@ -349,7 +375,16 @@ class Container extends React.Component {
 
   handleFeatureNodeSplit = (features) => {
     this.handleClosePopup();
-    editors.lineNodeSplit(features, this.state.map);
+    for(let item of features){
+      editors.lineNodeSplit(item, this.state.map);
+    }
+  }
+
+  handleDelete = (features) => {
+    this.handleClosePopup();
+    for(let item of features){
+      editors.deleteFeature(item, this.state.map);
+    }
   }
 
   render(){
@@ -387,13 +422,13 @@ class Container extends React.Component {
             && this.state.select.getFeatures().getArray().length > 0 
             && this.state.select.getFeatures().getArray()[0].getGeometry().getType().indexOf('LineString') !== -1 ?
               <>
-                <li onClick={() => this.handleFeatureStraight(this.state.select.getFeatures().getArray()[0])}> 
+                <li onClick={() => this.handleFeatureStraight(this.state.select.getFeatures().getArray())}> 
                   직선화
                 </li>
-                <li onClick={() => this.handleFeatureReverse(this.state.select.getFeatures().getArray()[0])}>
+                <li onClick={() => this.handleFeatureReverse(this.state.select.getFeatures().getArray())}>
                   방향반전
                 </li>
-                <li onClick={() => this.handleFeatureNodeSplit(this.state.select.getFeatures().getArray()[0])}>
+                <li onClick={() => this.handleFeatureNodeSplit(this.state.select.getFeatures().getArray())}>
                   노드별 분할
                 </li>
               </>
@@ -404,20 +439,14 @@ class Container extends React.Component {
             && this.state.select.getFeatures().getArray().length > 0
             && this.state.select.getFeatures().getArray()[0].getGeometry().getType().indexOf('Point') === -1 ?
               <>
-                <li onClick={() => this.handleFeatureSimplify(this.state.select.getFeatures().getArray()[0])}>
+                <li onClick={() => this.handleFeatureSimplify(this.state.select.getFeatures().getArray())}>
                   단순화
                 </li>
-                <li onClick={() => this.handleFeatureReflect('short', this.state.select.getFeatures().getArray()[0])}>
+                <li onClick={() => this.handleFeatureReflect('short', this.state.select.getFeatures().getArray())}>
                   짧은축 반전
                 </li>
-                <li onClick={() => this.handleFeatureReflect('long', this.state.select.getFeatures().getArray()[0])}>
+                <li onClick={() => this.handleFeatureReflect('long', this.state.select.getFeatures().getArray())}>
                   긴축 반전
-                </li>
-                <li onClick={() => this.handleFeatureSplit(this.state.select.getFeatures().getArray()[0].getGeometry().getType(), this.state.select.getFeatures().getArray()[0])}>
-                  분할
-                </li>
-                <li onClick={() => this.handleFeatureRotate(this.state.map, this.state.select.getFeatures().getArray())}>
-                  회전
                 </li>
                 <li onClick={this.handleFeatureMove}>
                   이동
@@ -425,10 +454,22 @@ class Container extends React.Component {
               </>
             : null}
             {
+            this.state.select !== null 
+            && this.state.select.getFeatures().getArray().length === 1
+            && this.state.select.getFeatures().getArray()[0].getGeometry().getType().indexOf('Point') === -1 ?
+              <>
+                <li onClick={() => this.handleFeatureRotate(this.state.map, this.state.select.getFeatures().getArray())}>
+                  회전
+                </li>
+                <li onClick={() => this.handleFeatureSplit(this.state.select.getFeatures().getArray()[0].getGeometry().getType(), this.state.select.getFeatures().getArray()[0])}>
+                  분할
+                </li>
+              </>
+            : null}
+            {
             // 2개 이상의 피쳐(같은 geometry type) 일 때 편집 
               this.state.select !== null 
               && this.state.select.getFeatures().getArray().length > 1 
-              && this.state.select.getFeatures().getArray()[0].getGeometry().getType() === this.state.select.getFeatures().getArray()[1].getGeometry().getType()
               ?
               <li onClick={() => this.handleFeatureMerge(this.state.select.getFeatures().getArray()[0].getGeometry().getType(), this.state.select.getFeatures().getArray())}>
                 병합
@@ -444,10 +485,14 @@ class Container extends React.Component {
                 </li>
               : null
             }
-            <li onClick={this.handleFeatureMove}>
-              수정
-            </li>
-            <li onClick={this.handleFeatureMove}>
+            {
+              this.state.select !== null 
+              && this.state.select.getFeatures().getArray().length === 1 ? 
+                <li onClick={this.handleFeatureMove}>
+                  수정
+                </li>
+              : null}
+            <li onClick={() => this.handleDelete(this.state.select.getFeatures().getArray())}>
               삭제
             </li>
         </ul>

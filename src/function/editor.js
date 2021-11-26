@@ -523,6 +523,9 @@ const editors = {
     if(feature.getGeometry().getType() === 'MultiPoint'){
       
     }
+  },
+  deleteFeature: (feature, map) => {
+    map.getLayers().getArray()[1].getSource().removeFeature(feature);
   }
 	
 }
