@@ -81,6 +81,8 @@ class Container extends React.Component {
 					this2.state.map.removeInteraction(interaction);
 				} else if (interaction instanceof RotateFeatureInteraction) { // 피쳐 회전 interaction 삭제
 					this2.state.map.removeInteraction(interaction);
+				} else if(interaction instanceof Modify) { // 피쳐 수정 interaction 삭제
+					this2.state.map.removeInteraction(interaction);
 				}
 			});
 		})
@@ -113,9 +115,6 @@ class Container extends React.Component {
 			if (interaction instanceof Draw) {
 				this2.state.map.removeInteraction(interaction);
 			}
-			if (interaction instanceof Snap) {
-				this2.state.map.removeInteraction(interaction);
-			}
 		})
 
 		if (type) {
@@ -133,10 +132,7 @@ class Container extends React.Component {
 
 			this.state.map.addInteraction(draw);
 
-			const snap = new Snap({
-				source: this.state.drawLyr.getSource()
-			})
-			this.state.map.addInteraction(snap);
+			this.handleAddSnap();
 
 			this.setState(draw);
 		}
@@ -387,6 +383,33 @@ class Container extends React.Component {
 		}
 	}
 
+	handleFeatureEdit = (features) => {
+		this.handleClosePopup();
+		
+		const modify = new Modify({
+			features
+		});
+		this.state.map.addInteraction(modify);
+
+		this.handleAddSnap();
+	}
+
+	// snap 이벤트
+	handleAddSnap = () => {
+		const this2 = this;
+		this.state.map.getInteractions().forEach(function (interaction) {
+			if(interaction instanceof Snap) {
+				this2.state.map.removeInteraction(interaction);
+			}
+		})
+
+		const snap = new Snap({
+			source: this.state.drawLyr.getSource()
+		})
+
+		this.state.map.addInteraction(snap);
+	}
+
 	render() {
 		const editToolOpen = Boolean(this.state.anchorEl);
 		return (
@@ -488,7 +511,7 @@ class Container extends React.Component {
 					{
 						this.state.select !== null
 							&& this.state.select.getFeatures().getArray().length === 1 ?
-							<li onClick={this.handleFeatureMove}>
+							<li onClick={() => this.handleFeatureEdit(this.state.select.getFeatures())}>
 								수정
 							</li>
 							: null}
