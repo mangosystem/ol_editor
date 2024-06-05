@@ -12,8 +12,8 @@
 /build
 
 # lock
-.package-lock.json
-.yarn.lock
+package-lock.json
+yarn.lock
 
 # misc
 .DS_Store
